@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 
 const tabs = ['Merge PDF', 'Split PDF', 'Reorder Pages']
-const BASE = 'https://docflow-backend-production-0707.up.railway.app'
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 

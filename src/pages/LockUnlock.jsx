@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
 function UploadZone({ onFileSelect, isDragActive, getRootProps, getInputProps }) {
   return (
     <div
@@ -158,8 +160,8 @@ export default function LockUnlock() {
       formData.append('password', password)
 
       const endpoint = activeTab === 'Lock PDF'
-        ? 'https://docflow-backend-production-0707.up.railway.app/api/lock-pdf'
-        : 'https://docflow-backend-production-0707.up.railway.app/api/unlock-pdf'
+        ? `${API_BASE_URL}/api/lock-pdf`
+        : `${API_BASE_URL}/api/unlock-pdf`
 
       const res = await fetch(endpoint, {
         method: 'POST',

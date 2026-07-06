@@ -3,6 +3,8 @@ import { useDropzone } from 'react-dropzone'
 import JSZip from 'jszip'
 import { useEffect } from 'react'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
 const tabs = ['Compress Image', 'Compress PDF']
 
 const acceptedTypes = {
@@ -214,7 +216,7 @@ export default function Compress() {
           formData.append('file', file)
           formData.append('quality', '0.5')
 
-          const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/compress/image', {
+          const res = await fetch(`${API_BASE_URL}/api/compress/image`, {
             method: 'POST',
             body: formData
           })
@@ -252,7 +254,7 @@ export default function Compress() {
         formData.append('file', pdfFile)
         formData.append('quality', '0.3')
 
-        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/compress/pdf', {
+        const res = await fetch(`${API_BASE_URL}/api/compress/pdf`, {
           method: 'POST',
           body: formData
         })

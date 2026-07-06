@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
 const conversionOptions = [
   { name: 'Word', format: 'docx', icon: '📄', color: 'indigo' },
   { name: 'PowerPoint', format: 'pptx', icon: '📽️', color: 'orange' },
@@ -194,7 +196,7 @@ export default function Convert() {
         formData.append('file', file)
         formData.append('format', 'png')
 
-        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/convert/pdf-to-image', {
+        const res = await fetch(`${API_BASE_URL}/api/convert/pdf-to-image`, {
           method: 'POST',
           body: formData
         })
@@ -215,7 +217,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('files', file)
 
-        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/convert/image-to-pdf', {
+        const res = await fetch(`${API_BASE_URL}/api/convert/image-to-pdf`, {
           method: 'POST',
           body: formData
         })
@@ -233,7 +235,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/convert/pdf-to-word', {
+        const res = await fetch(`${API_BASE_URL}/api/convert/pdf-to-word`, {
           method: 'POST',
           body: formData
         })
@@ -247,7 +249,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/convert/pdf-to-ppt', {
+        const res = await fetch(`${API_BASE_URL}/api/convert/pdf-to-ppt`, {
           method: 'POST',
           body: formData
         })
@@ -261,7 +263,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/convert/office-to-pdf', {
+        const res = await fetch(`${API_BASE_URL}/api/convert/office-to-pdf`, {
           method: 'POST',
           body: formData
         })
