@@ -51,7 +51,9 @@ function UploadZone({ tab, onFileSelect }) {
           </p>
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          {tab === 'Compress Image' ? 'PNG, JPG, JPEG, WebP supported' : 'PDF files only'}
+          {tab === 'Compress Image'
+            ? 'PNG, JPG, JPEG, WebP supported · HEIC not supported (iPhone users: export as JPG)'
+            : 'PDF files only'}
         </p>
       </div>
     </div>
@@ -236,7 +238,10 @@ export default function Compress() {
             body: formData
           })
 
-          if (!res.ok) throw new Error('Compression failed on server')
+          if (!res.ok) {
+            const errorText = await res.text()
+            throw new Error(errorText || 'Compression failed on server')
+          }
 
           const blob = await res.blob()
           compressedBlobs.push({ name: file.name, blob })
