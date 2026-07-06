@@ -139,32 +139,31 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
   )
 }
 
-const [resizing, setResizing] = useState(false)
-const [size, setSize] = useState({ width: 150, height: 'auto' })
-const resizeStart = useRef({ width: 0, x: 0 })
-
-const handleResizeStart = (e) => {
-  e.stopPropagation()
-  setResizing(true)
-  resizeStart.current = { width: size.width, x: e.clientX }
-}
-
-useEffect(() => {
-  if (!resizing) return
-  const handleMove = (e) => {
-    const delta = e.clientX - resizeStart.current.x
-    setSize(prev => ({ ...prev, width: Math.max(80, resizeStart.current.width + delta) }))
-  }
-  const handleEnd = () => setResizing(false)
-  window.addEventListener('mousemove', handleMove)
-  window.addEventListener('mouseup', handleEnd)
-  return () => {
-    window.removeEventListener('mousemove', handleMove)
-    window.removeEventListener('mouseup', handleEnd)
-  }
-}, [resizing])
-
 function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEdit, onStopEdit, onSelect }) {
+  const [resizing, setResizing] = useState(false)
+  const [size, setSize] = useState({ width: 150, height: 'auto' })
+  const resizeStart = useRef({ width: 0, x: 0 })
+
+  const handleResizeStart = (e) => {
+    e.stopPropagation()
+    setResizing(true)
+    resizeStart.current = { width: size.width, x: e.clientX }
+  }
+
+  useEffect(() => {
+    if (!resizing) return
+    const handleMove = (e) => {
+      const delta = e.clientX - resizeStart.current.x
+      setSize(prev => ({ ...prev, width: Math.max(80, resizeStart.current.width + delta) }))
+    }
+    const handleEnd = () => setResizing(false)
+    window.addEventListener('mousemove', handleMove)
+    window.addEventListener('mouseup', handleEnd)
+    return () => {
+      window.removeEventListener('mousemove', handleMove)
+      window.removeEventListener('mouseup', handleEnd)
+    }
+  }, [resizing])
   const inputRef = useRef(null)
 
   useEffect(() => {
