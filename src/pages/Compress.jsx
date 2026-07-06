@@ -172,7 +172,21 @@ async function warmupServer(baseUrl) {
   try {
     await fetch(`${baseUrl}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(8000) })
   } catch {
-    // Ignore — warmup is best-effort, actual request will retry itself
+    // Ignore — warmup is best-effort
+  }
+}
+
+// Retry on network failures only (e.g. Safari 'Load failed', LTE drops)
+// Does NOT retry on server errors (4xx/5xx) — those are deterministic
+async function fetchWithNetworkRetry(url, options, retries = 2) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options)
+      return res  // Any HTTP response (even 4xx/5xx) — let caller handle it
+    } catch (networkErr) {
+      if (attempt === retries) throw networkErr
+      await new Promise(r => setTimeout(r, 2000 * attempt)) // 2s, then 4s
+    }
   }
 }
 
@@ -216,12 +230,23 @@ export default function Compress() {
   }
 
   const handleCompress = async () => {
+    // Warn for large PDFs on mobile before starting
+    if (activeTab === 'Compress PDF') {
+      const largePdfs = files.filter(f => f.size > 5 * 1024 * 1024)
+      if (largePdfs.length > 0) {
+        const ok = window.confirm(
+          `Your PDF is ${(largePdfs[0].size / (1024 * 1024)).toFixed(1)} MB. Large files may take longer on mobile networks. Continue?`
+        )
+        if (!ok) return
+      }
+    }
+
     setCompressing(true)
     setCompressStatus('Waking up server...')
 
     // Ping server first to wake Railway from sleep (free tier goes idle)
     await warmupServer(API_BASE_URL)
-    setCompressStatus('Compressing...')
+    setCompressStatus('Uploading...')
 
     try {
       if (activeTab === 'Compress Image') {
@@ -233,7 +258,7 @@ export default function Compress() {
           formData.append('file', file)
           formData.append('quality', '0.5')
 
-          const res = await fetch(`${API_BASE_URL}/api/compress/image`, {
+          const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/compress/image`, {
             method: 'POST',
             body: formData
           })
@@ -274,7 +299,7 @@ export default function Compress() {
           formData.append('file', pdfFile)
           formData.append('quality', '0.3')
 
-          const res = await fetch(`${API_BASE_URL}/api/compress/pdf`, {
+          const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/compress/pdf`, {
             method: 'POST',
             body: formData
           })
@@ -283,6 +308,7 @@ export default function Compress() {
             const errorText = await res.text()
             throw new Error(errorText || 'PDF compression failed on server')
           }
+          setCompressStatus('Compressing...')
 
           const blob = await res.blob()
           compressedBlobs.push({ name: pdfFile.name, blob })
