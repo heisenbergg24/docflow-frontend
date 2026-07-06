@@ -214,7 +214,7 @@ export default function Compress() {
           formData.append('file', file)
           formData.append('quality', '0.5')
 
-          const res = await fetch('http://localhost:8080/api/compress/image', {
+          const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/compress/image', {
             method: 'POST',
             body: formData
           })
@@ -252,7 +252,7 @@ export default function Compress() {
         formData.append('file', pdfFile)
         formData.append('quality', '0.3')
 
-        const res = await fetch('http://localhost:8080/api/compress/pdf', {
+        const res = await fetch('https://docflow-backend-production-0707.up.railway.app/api/compress/pdf', {
           method: 'POST',
           body: formData
         })

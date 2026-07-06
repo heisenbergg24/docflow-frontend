@@ -158,8 +158,8 @@ export default function LockUnlock() {
       formData.append('password', password)
 
       const endpoint = activeTab === 'Lock PDF'
-        ? 'http://localhost:8080/api/lock-pdf'
-        : 'http://localhost:8080/api/unlock-pdf'
+        ? 'https://docflow-backend-production-0707.up.railway.app/api/lock-pdf'
+        : 'https://docflow-backend-production-0707.up.railway.app/api/unlock-pdf'
 
       const res = await fetch(endpoint, {
         method: 'POST',
