@@ -165,16 +165,12 @@ function CompressResult({ originalSize, compressedSize, isMultiple, fileCount, p
   )
 }
 
-// Retry fetch with exponential-ish backoff — handles Railway cold starts
-async function fetchWithRetry(url, options, retries = 3, delayMs = 3000) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, options)
-      return res
-    } catch (err) {
-      if (attempt === retries) throw err
-      await new Promise(r => setTimeout(r, delayMs))
-    }
+// Ping backend to wake it up from Railway sleep before actual request
+async function warmupServer(baseUrl) {
+  try {
+    await fetch(`${baseUrl}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(8000) })
+  } catch {
+    // Ignore — warmup is best-effort, actual request will retry itself
   }
 }
 
@@ -219,6 +215,10 @@ export default function Compress() {
 
   const handleCompress = async () => {
     setCompressing(true)
+    setCompressStatus('Waking up server...')
+
+    // Ping server first to wake Railway from sleep (free tier goes idle)
+    await warmupServer(API_BASE_URL)
     setCompressStatus('Compressing...')
 
     try {
@@ -231,22 +231,10 @@ export default function Compress() {
           formData.append('file', file)
           formData.append('quality', '0.5')
 
-          setCompressStatus('Compressing...')
-          let res
-          try {
-            res = await fetchWithRetry(`${API_BASE_URL}/api/compress/image`, {
-              method: 'POST',
-              body: formData
-            })
-          } catch {
-            // First attempt failed — server likely cold-starting on Railway
-            setCompressStatus('Waking up server, please wait...')
-            await new Promise(r => setTimeout(r, 5000))
-            res = await fetch(`${API_BASE_URL}/api/compress/image`, {
-              method: 'POST',
-              body: formData
-            })
-          }
+          const res = await fetch(`${API_BASE_URL}/api/compress/image`, {
+            method: 'POST',
+            body: formData
+          })
 
           if (!res.ok) throw new Error('Compression failed on server')
 
@@ -281,21 +269,10 @@ export default function Compress() {
           formData.append('file', pdfFile)
           formData.append('quality', '0.3')
 
-          setCompressStatus('Compressing...')
-          let res
-          try {
-            res = await fetchWithRetry(`${API_BASE_URL}/api/compress/pdf`, {
-              method: 'POST',
-              body: formData
-            })
-          } catch {
-            setCompressStatus('Waking up server, please wait...')
-            await new Promise(r => setTimeout(r, 5000))
-            res = await fetch(`${API_BASE_URL}/api/compress/pdf`, {
-              method: 'POST',
-              body: formData
-            })
-          }
+          const res = await fetch(`${API_BASE_URL}/api/compress/pdf`, {
+            method: 'POST',
+            body: formData
+          })
 
           if (!res.ok) {
             const errorText = await res.text()
@@ -326,7 +303,7 @@ export default function Compress() {
       }
     } catch (err) {
       console.error(err)
-      alert('Server took too long to respond. Please try again — it should work on the second attempt!')
+      alert('Compression failed. Please try again in a few seconds.')
     } finally {
       setCompressing(false)
       setCompressStatus('')
