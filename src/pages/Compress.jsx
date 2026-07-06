@@ -13,14 +13,24 @@ const acceptedTypes = {
 }
 
 function UploadZone({ tab, onFileSelect }) {
-  const onDrop = useCallback(acceptedFiles => {
+  const onDrop = useCallback((acceptedFiles, fileRejections) => {
+    if (fileRejections.length > 0) {
+      const isTooLarge = fileRejections.some(r => r.errors.some(e => e.code === 'file-too-large'))
+      if (isTooLarge) {
+        alert(`File is too large! Maximum allowed size is ${tab === 'Compress Image' ? '5MB' : '20MB'}.`)
+        return
+      }
+    }
     if (acceptedFiles.length > 0) onFileSelect(acceptedFiles)
-  }, [onFileSelect])
+  }, [onFileSelect, tab])
+
+  const maxSize = tab === 'Compress Image' ? 5 * 1024 * 1024 : 20 * 1024 * 1024
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: acceptedTypes[tab],
-    multiple: true
+    multiple: true,
+    maxSize
   })
 
   return (
@@ -50,10 +60,10 @@ function UploadZone({ tab, onFileSelect }) {
             or <span className="text-indigo-500 font-medium">browse to upload</span>
           </p>
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500">
+        <p className="text-xs text-gray-400 dark:text-gray-500 max-w-sm mx-auto">
           {tab === 'Compress Image'
-            ? 'PNG, JPG, JPEG, WebP supported · HEIC not supported (iPhone users: export as JPG)'
-            : 'PDF files only'}
+            ? 'Max 5MB. PNG, JPG, JPEG, WebP supported · HEIC not supported (iPhone users: export as JPG)'
+            : 'Max 20MB. PDF files only'}
         </p>
       </div>
     </div>
