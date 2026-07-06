@@ -83,7 +83,7 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
   ]
 
   return (
-    <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl mb-6 w-fit mx-auto">
+    <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl mb-6 mx-auto overflow-x-auto max-w-full">
       {tools.map(tool => (
         <button
           key={tool.id}
@@ -138,6 +138,31 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
     </div>
   )
 }
+
+const [resizing, setResizing] = useState(false)
+const [size, setSize] = useState({ width: 150, height: 'auto' })
+const resizeStart = useRef({ width: 0, x: 0 })
+
+const handleResizeStart = (e) => {
+  e.stopPropagation()
+  setResizing(true)
+  resizeStart.current = { width: size.width, x: e.clientX }
+}
+
+useEffect(() => {
+  if (!resizing) return
+  const handleMove = (e) => {
+    const delta = e.clientX - resizeStart.current.x
+    setSize(prev => ({ ...prev, width: Math.max(80, resizeStart.current.width + delta) }))
+  }
+  const handleEnd = () => setResizing(false)
+  window.addEventListener('mousemove', handleMove)
+  window.addEventListener('mouseup', handleEnd)
+  return () => {
+    window.removeEventListener('mousemove', handleMove)
+    window.removeEventListener('mouseup', handleEnd)
+  }
+}, [resizing])
 
 function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEdit, onStopEdit, onSelect }) {
   const inputRef = useRef(null)
@@ -226,18 +251,18 @@ function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEd
             placeholder="Type here..."
           />
         ) : (
-          <div
-            style={textStyle}
-            className={`px-2 py-1 rounded relative whitespace-nowrap border ${isSelected ? 'border-indigo-400' : 'border-transparent group-hover:border-indigo-300'}`}
-          >
+          <div style={{ ...textStyle, width: size.width }} className={`px-2 py-1 rounded relative border ${isSelected ? 'border-indigo-400' : 'border-transparent group-hover:border-indigo-300'}`}>
             {element.text || <span className="text-gray-300 italic">Empty text</span>}
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(element.id) }}
-              className={`absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-400 text-white text-xs flex items-center justify-center transition-opacity
-                ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-            >
+            <button onClick={(e) => { e.stopPropagation(); onDelete(element.id) }}
+              className={`absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-400 text-white text-xs flex items-center justify-center transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               ×
             </button>
+            {isSelected && (
+              <div
+                onMouseDown={handleResizeStart}
+                className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-500 border-2 border-white cursor-se-resize"
+              />
+            )}
           </div>
         )}
       </div>
@@ -1594,7 +1619,7 @@ export default function EditPDF() {
   }, [pdfDoc])
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 pt-28 pb-16 px-6">
+    <div className="min-h-screen bg-white dark:bg-gray-950 pt-28 pb-16 px-3 sm:px-6">
       <div className="max-w-5xl mx-auto">
 
         <div className="text-center mb-10">
@@ -1750,13 +1775,13 @@ export default function EditPDF() {
               </div>
 
               {/* Main canvas area */}
-              <div ref={canvasWrapperRef} className="flex-1 w-full overflow-x-auto pb-4">
+              <div ref={canvasWrapperRef} className="flex-1 w-full overflow-x-hidden pb-4">
                 <div
-                  className="relative inline-block border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm mx-auto md:mx-0"
+                  className="relative block w-full border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm"
                   style={{ cursor: activeTool === 'text' ? 'text' : 'default' }}
                   onClick={handleCanvasClick}
                 >
-                  <canvas ref={canvasRef} />
+                  <canvas ref={canvasRef} className="w-full h-auto block" />
 
                   {/* Shape drawing capture layer - only active while drawing a new shape */}
                   <ShapeCaptureSVG
