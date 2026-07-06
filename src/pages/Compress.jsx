@@ -308,7 +308,12 @@ export default function Compress() {
       }
     } catch (err) {
       console.error(err)
-      alert('Compression failed. Please try again in a few seconds.')
+      const msg = err?.message || ''
+      if (msg && msg.length < 300) {
+        alert(msg)
+      } else {
+        alert('Compression failed. Please try again in a few seconds.')
+      }
     } finally {
       setCompressing(false)
       setCompressStatus('')
