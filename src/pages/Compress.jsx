@@ -165,10 +165,24 @@ function CompressResult({ originalSize, compressedSize, isMultiple, fileCount, p
   )
 }
 
+// Retry fetch with exponential-ish backoff — handles Railway cold starts
+async function fetchWithRetry(url, options, retries = 3, delayMs = 3000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options)
+      return res
+    } catch (err) {
+      if (attempt === retries) throw err
+      await new Promise(r => setTimeout(r, delayMs))
+    }
+  }
+}
+
 export default function Compress() {
   const [activeTab, setActiveTab] = useState('Compress Image')
   const [files, setFiles] = useState([])
   const [compressing, setCompressing] = useState(false)
+  const [compressStatus, setCompressStatus] = useState('')
   const [result, setResult] = useState(null)
 
   useEffect(() => {
@@ -205,6 +219,7 @@ export default function Compress() {
 
   const handleCompress = async () => {
     setCompressing(true)
+    setCompressStatus('Compressing...')
 
     try {
       if (activeTab === 'Compress Image') {
@@ -216,10 +231,22 @@ export default function Compress() {
           formData.append('file', file)
           formData.append('quality', '0.5')
 
-          const res = await fetch(`${API_BASE_URL}/api/compress/image`, {
-            method: 'POST',
-            body: formData
-          })
+          setCompressStatus('Compressing...')
+          let res
+          try {
+            res = await fetchWithRetry(`${API_BASE_URL}/api/compress/image`, {
+              method: 'POST',
+              body: formData
+            })
+          } catch {
+            // First attempt failed — server likely cold-starting on Railway
+            setCompressStatus('Waking up server, please wait...')
+            await new Promise(r => setTimeout(r, 5000))
+            res = await fetch(`${API_BASE_URL}/api/compress/image`, {
+              method: 'POST',
+              body: formData
+            })
+          }
 
           if (!res.ok) throw new Error('Compression failed on server')
 
@@ -242,55 +269,67 @@ export default function Compress() {
           url: URL.createObjectURL(compressedBlobs[0].blob),
           fileName: compressedBlobs[0].name,
           perFile: compressedResults,
-          blobs: compressedBlobs // needed for zip download later
+          blobs: compressedBlobs
         })
       } else {
-      // Real PDF compression via Spring Boot backend
-      const compressedResults = []
-      const compressedBlobs = []
+        // PDF compression via Spring Boot backend
+        const compressedResults = []
+        const compressedBlobs = []
 
-      for (const pdfFile of files) {
-        const formData = new FormData()
-        formData.append('file', pdfFile)
-        formData.append('quality', '0.3')
+        for (const pdfFile of files) {
+          const formData = new FormData()
+          formData.append('file', pdfFile)
+          formData.append('quality', '0.3')
 
-        const res = await fetch(`${API_BASE_URL}/api/compress/pdf`, {
-          method: 'POST',
-          body: formData
-        })
+          setCompressStatus('Compressing...')
+          let res
+          try {
+            res = await fetchWithRetry(`${API_BASE_URL}/api/compress/pdf`, {
+              method: 'POST',
+              body: formData
+            })
+          } catch {
+            setCompressStatus('Waking up server, please wait...')
+            await new Promise(r => setTimeout(r, 5000))
+            res = await fetch(`${API_BASE_URL}/api/compress/pdf`, {
+              method: 'POST',
+              body: formData
+            })
+          }
 
-        if (!res.ok) {
-          const errorText = await res.text()
-          throw new Error(errorText || 'PDF compression failed on server')
+          if (!res.ok) {
+            const errorText = await res.text()
+            throw new Error(errorText || 'PDF compression failed on server')
+          }
+
+          const blob = await res.blob()
+          compressedBlobs.push({ name: pdfFile.name, blob })
+          compressedResults.push({
+            name: pdfFile.name,
+            originalSize: pdfFile.size,
+            compressedSize: blob.size
+          })
         }
 
-        const blob = await res.blob()
-        compressedBlobs.push({ name: pdfFile.name, blob })
-        compressedResults.push({
-          name: pdfFile.name,
-          originalSize: pdfFile.size,
-          compressedSize: blob.size
+        const totalOriginal = files.reduce((acc, f) => acc + f.size, 0)
+        const totalCompressed = compressedResults.reduce((acc, r) => acc + r.compressedSize, 0)
+
+        setResult({
+          originalSize: totalOriginal,
+          compressedSize: totalCompressed,
+          isMultiple: files.length > 1,
+          url: URL.createObjectURL(compressedBlobs[0].blob),
+          fileName: compressedBlobs[0].name,
+          perFile: compressedResults,
+          blobs: compressedBlobs
         })
       }
-
-      const totalOriginal = files.reduce((acc, f) => acc + f.size, 0)
-      const totalCompressed = compressedResults.reduce((acc, r) => acc + r.compressedSize, 0)
-
-      setResult({
-        originalSize: totalOriginal,
-        compressedSize: totalCompressed,
-        isMultiple: files.length > 1,
-        url: URL.createObjectURL(compressedBlobs[0].blob),
-        fileName: compressedBlobs[0].name,
-        perFile: compressedResults,
-        blobs: compressedBlobs
-      })
-    }
     } catch (err) {
       console.error(err)
-      alert('Something went wrong while compressing. Make sure the backend is running.')
+      alert('Server took too long to respond. Please try again — it should work on the second attempt!')
     } finally {
       setCompressing(false)
+      setCompressStatus('')
     }
   }
 
@@ -378,7 +417,7 @@ export default function Compress() {
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                   </svg>
-                  Compressing...
+                  {compressStatus || 'Compressing...'}
                 </span>
               ) : `Compress ${activeTab === 'Compress Image' ? 'Image' : 'PDF'} →`}
             </button>
