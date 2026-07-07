@@ -68,12 +68,7 @@ const features = [
   },
 ]
 
-const trustItems = [
-  { icon: '🔒', text: 'Files never stored' },
-  { icon: '⚡', text: 'Instant processing' },
-  { icon: '🆓', text: '100% free' },
-  { icon: '🚫', text: 'No watermarks' },
-]
+
 
 function Hero() {
   return (
@@ -133,15 +128,7 @@ function Hero() {
           ))}
         </div>
 
-        {/* Trust strip */}
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-          {trustItems.map((t) => (
-            <div key={t.text} className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-              <span>{t.icon}</span>
-              <span>{t.text}</span>
-            </div>
-          ))}
-        </div>
+
 
       </div>
     </section>
