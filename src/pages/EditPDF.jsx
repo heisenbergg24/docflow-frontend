@@ -146,22 +146,29 @@ function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEd
 
   const handleResizeStart = (e) => {
     e.stopPropagation()
+    e.preventDefault()
     setResizing(true)
-    resizeStart.current = { width: size.width, x: e.clientX }
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    resizeStart.current = { width: size.width, x: clientX }
   }
 
   useEffect(() => {
     if (!resizing) return
     const handleMove = (e) => {
-      const delta = e.clientX - resizeStart.current.x
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX
+      const delta = clientX - resizeStart.current.x
       setSize(prev => ({ ...prev, width: Math.max(80, resizeStart.current.width + delta) }))
     }
     const handleEnd = () => setResizing(false)
     window.addEventListener('mousemove', handleMove)
     window.addEventListener('mouseup', handleEnd)
+    window.addEventListener('touchmove', handleMove, { passive: false })
+    window.addEventListener('touchend', handleEnd)
     return () => {
       window.removeEventListener('mousemove', handleMove)
       window.removeEventListener('mouseup', handleEnd)
+      window.removeEventListener('touchmove', handleMove)
+      window.removeEventListener('touchend', handleEnd)
     }
   }, [resizing])
   const inputRef = useRef(null)
@@ -259,7 +266,8 @@ function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEd
             {isSelected && (
               <div
                 onMouseDown={handleResizeStart}
-                className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-500 border-2 border-white cursor-se-resize"
+                onTouchStart={handleResizeStart}
+                className="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-indigo-500 border-2 border-white cursor-se-resize touch-none"
               />
             )}
           </div>
@@ -1590,15 +1598,25 @@ export default function EditPDF() {
       }
 
       const viewport = page.getViewport({ scale })
+      const dpr = window.devicePixelRatio || 1
 
       const canvas = canvasRef.current
       const context = canvas.getContext('2d', { alpha: false })
-      canvas.width = viewport.width
-      canvas.height = viewport.height
+
+      // Set the canvas backing-store size to physical pixels
+      canvas.width = Math.floor(viewport.width * dpr)
+      canvas.height = Math.floor(viewport.height * dpr)
+
+      // Set the CSS display size to logical pixels so layout is correct
+      canvas.style.width = `${viewport.width}px`
+      canvas.style.height = `${viewport.height}px`
+
+      // Scale context so pdfjs renders at full device resolution
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
 
       // Paint white background so transparent PDFs don't render on a black canvas
       context.fillStyle = '#ffffff'
-      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.fillRect(0, 0, viewport.width, viewport.height)
 
       await page.render({ canvasContext: context, viewport }).promise
     }
@@ -1780,7 +1798,7 @@ export default function EditPDF() {
                   style={{ cursor: activeTool === 'text' ? 'text' : 'default' }}
                   onClick={handleCanvasClick}
                 >
-                  <canvas ref={canvasRef} className="w-full h-auto block" />
+                  <canvas ref={canvasRef} className="block max-w-full" />
 
                   {/* Shape drawing capture layer - only active while drawing a new shape */}
                   <ShapeCaptureSVG

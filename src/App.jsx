@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -10,12 +10,26 @@ import Organize from './pages/Organize'
 import LockUnlock from './pages/LockUnlock'
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false)
+  // Read saved preference from localStorage on first render
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('docflow-theme')
+    if (saved) return saved === 'dark'
+    // Fall back to OS preference
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
 
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev)
-    document.documentElement.classList.toggle('dark')
-  }
+  // Sync class on <html> and persist to localStorage whenever darkMode changes
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('docflow-theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('docflow-theme', 'light')
+    }
+  }, [darkMode])
+
+  const toggleDarkMode = () => setDarkMode(prev => !prev)
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">

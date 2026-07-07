@@ -398,7 +398,7 @@ export default function Compress() {
             Compress Files
           </h1>
           <p className="text-gray-400 dark:text-gray-500">
-            Reduce file size instantly — no quality loss, no watermarks.
+            Reduce file size instantly — no watermarks.
           </p>
         </div>
 
