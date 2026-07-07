@@ -90,26 +90,10 @@ function Hero() {
         </h1>
 
         {/* Subheadline */}
-        <p className="text-lg md:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg md:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed">
           Compress, convert, edit and secure your PDFs and images — instantly in your browser. No waiting, no watermarks, no limits.
         </p>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-          <Link
-            to="/compress"
-            className="text-white font-semibold px-8 py-3.5 rounded-full transition-all text-sm shadow-lg hover:scale-105"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
-          >
-            Start Compressing →
-          </Link>
-          <Link
-            to="/convert"
-            className="text-gray-700 dark:text-gray-300 font-semibold px-8 py-3.5 rounded-full transition-all text-sm border border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-600 hover:scale-105 bg-white dark:bg-gray-900"
-          >
-            Convert a File
-          </Link>
-        </div>
 
         {/* Feature Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-12">

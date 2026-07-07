@@ -141,23 +141,29 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
 
 function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEdit, onStopEdit, onSelect }) {
   const [resizing, setResizing] = useState(false)
-  const [size, setSize] = useState({ width: 150, height: 'auto' })
-  const resizeStart = useRef({ width: 0, x: 0 })
+  const [size, setSize] = useState({ width: 150, height: 40 })
+  const resizeStart = useRef({ width: 0, height: 0, x: 0, y: 0 })
 
   const handleResizeStart = (e) => {
     e.stopPropagation()
     e.preventDefault()
     setResizing(true)
     const clientX = e.touches ? e.touches[0].clientX : e.clientX
-    resizeStart.current = { width: size.width, x: clientX }
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    resizeStart.current = { width: size.width, height: size.height, x: clientX, y: clientY }
   }
 
   useEffect(() => {
     if (!resizing) return
     const handleMove = (e) => {
       const clientX = e.touches ? e.touches[0].clientX : e.clientX
-      const delta = clientX - resizeStart.current.x
-      setSize(prev => ({ ...prev, width: Math.max(80, resizeStart.current.width + delta) }))
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY
+      const deltaX = clientX - resizeStart.current.x
+      const deltaY = clientY - resizeStart.current.y
+      setSize(prev => ({
+        width: Math.max(80, resizeStart.current.width + deltaX),
+        height: Math.max(24, resizeStart.current.height + deltaY),
+      }))
     }
     const handleEnd = () => setResizing(false)
     window.addEventListener('mousemove', handleMove)
@@ -257,7 +263,7 @@ function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEd
             placeholder="Type here..."
           />
         ) : (
-          <div style={{ ...textStyle, width: size.width }} className={`px-2 py-1 rounded relative border ${isSelected ? 'border-indigo-400' : 'border-transparent group-hover:border-indigo-300'}`}>
+          <div style={{ ...textStyle, width: size.width, height: size.height, overflow: 'hidden' }} className={`px-2 py-1 rounded relative border ${isSelected ? 'border-indigo-400' : 'border-transparent group-hover:border-indigo-300'}`}>
             {element.text || <span className="text-gray-300 italic">Empty text</span>}
             <button onClick={(e) => { e.stopPropagation(); onDelete(element.id) }}
               className={`absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-400 text-white text-xs flex items-center justify-center transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
