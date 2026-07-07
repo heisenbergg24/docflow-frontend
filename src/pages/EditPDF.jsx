@@ -40,43 +40,59 @@ function UploadZone({ isDragActive, getRootProps, getInputProps }) {
 }
 
 function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied, onRemoveWatermark, onImageToolClick, onSignatureToolClick }) {
+  const grad = (id) => (
+    <defs>
+      <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#6366f1" />
+        <stop offset="100%" stopColor="#8b5cf6" />
+      </linearGradient>
+    </defs>
+  )
+
   const tools = [
     {
       id: 'select', label: 'Select', icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {grad('tg1')}
+          <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" stroke="url(#tg1)" />
         </svg>
       )
     },
     {
       id: 'text', label: 'Add Text', icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="4 7 4 4 20 4 20 7" />
-          <line x1="9" y1="20" x2="15" y2="20" />
-          <line x1="12" y1="4" x2="12" y2="20" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {grad('tg2')}
+          <polyline points="4 7 4 4 20 4 20 7" stroke="url(#tg2)" />
+          <line x1="9" y1="20" x2="15" y2="20" stroke="url(#tg2)" />
+          <line x1="12" y1="4" x2="12" y2="20" stroke="url(#tg2)" />
         </svg>
       )
     },
     {
       id: 'image', label: 'Add Image', icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {grad('tg3')}
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="url(#tg3)" />
+          <circle cx="8.5" cy="8.5" r="1.5" stroke="url(#tg3)" />
+          <polyline points="21 15 16 10 5 21" stroke="url(#tg3)" />
         </svg>
       )
     },
-    { id: 'signature', label: 'Signature', icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 17c2-1 3-3 5-3s2 2 4 2 3-3 5-2 2 3 4 1" />
-        <line x1="3" y1="21" x2="21" y2="21" />
-      </svg>
-    )},
+    {
+      id: 'signature', label: 'Signature', icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {grad('tg4')}
+          <path d="M3 17c2-1 3-3 5-3s2 2 4 2 3-3 5-2 2 3 4 1" stroke="url(#tg4)" />
+          <line x1="3" y1="21" x2="21" y2="21" stroke="url(#tg4)" />
+        </svg>
+      )
+    },
     {
       id: 'shape', label: 'Shapes', icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <circle cx="17" cy="6.5" r="3.5" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {grad('tg5')}
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="url(#tg5)" />
+          <circle cx="17" cy="6.5" r="3.5" stroke="url(#tg5)" />
         </svg>
       )
     },
@@ -96,7 +112,7 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
           className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium transition-all
             ${activeTool === tool.id
               ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+              : 'text-indigo-500 dark:text-gray-400 hover:text-indigo-700 dark:hover:text-gray-300'
             }`}
         >
           {tool.icon}
@@ -112,13 +128,14 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
         className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium transition-all
           ${watermarkApplied
             ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+            : 'text-indigo-500 dark:text-gray-400 hover:text-indigo-700 dark:hover:text-gray-300'
           }`}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5" />
-          <path d="M2 12l10 5 10-5" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {grad('tg6')}
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="url(#tg6)" />
+          <path d="M2 17l10 5 10-5" stroke="url(#tg6)" />
+          <path d="M2 12l10 5 10-5" stroke="url(#tg6)" />
         </svg>
         <span className="hidden sm:inline">Watermark</span>
       </button>
@@ -138,6 +155,7 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
     </div>
   )
 }
+
 
 function TextBox({ element, isEditing, isSelected, onUpdate, onDelete, onStartEdit, onStopEdit, onSelect }) {
   const [resizing, setResizing] = useState(false)
