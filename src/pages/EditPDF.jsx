@@ -83,7 +83,7 @@ function Toolbar({ activeTool, setActiveTool, onWatermarkClick, watermarkApplied
   ]
 
   return (
-    <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl mb-6 mx-auto overflow-x-auto max-w-full">
+    <div className="flex justify-center items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl mb-6 mx-auto w-fit max-w-full overflow-x-auto">
       {tools.map(tool => (
         <button
           key={tool.id}
