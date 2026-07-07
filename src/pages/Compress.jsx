@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import JSZip from 'jszip'
-import { useEffect } from 'react'
+import ErrorBanner from '../components/ErrorBanner'
+import { getErrorMessage } from '../utils/errorUtils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
@@ -12,17 +13,21 @@ const acceptedTypes = {
   'Compress PDF': { 'application/pdf': ['.pdf'] }
 }
 
-function UploadZone({ tab, onFileSelect }) {
+function UploadZone({ tab, onFileSelect, onError }) {
   const onDrop = useCallback((acceptedFiles, fileRejections) => {
     if (fileRejections.length > 0) {
       const isTooLarge = fileRejections.some(r => r.errors.some(e => e.code === 'file-too-large'))
       if (isTooLarge) {
-        alert(`File is too large! Maximum allowed size is ${tab === 'Compress Image' ? '5MB' : '20MB'}.`)
+        onError({
+          type: 'unknown',
+          title: 'File Too Large',
+          message: `Your file exceeds the maximum allowed size of ${tab === 'Compress Image' ? '5 MB' : '20 MB'}. Please use a smaller file.`,
+        })
         return
       }
     }
     if (acceptedFiles.length > 0) onFileSelect(acceptedFiles)
-  }, [onFileSelect, tab])
+  }, [onFileSelect, onError, tab])
 
   const maxSize = tab === 'Compress Image' ? 5 * 1024 * 1024 : 20 * 1024 * 1024
 
@@ -206,6 +211,7 @@ export default function Compress() {
   const [compressing, setCompressing] = useState(false)
   const [compressStatus, setCompressStatus] = useState('')
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -221,6 +227,7 @@ export default function Compress() {
   const handleFileSelect = (f) => {
     setFiles(f)
     setResult(null)
+    setError(null)
   }
 
   const handleRemove = (index) => {
@@ -231,12 +238,14 @@ export default function Compress() {
   const handleReset = () => {
     setFiles([])
     setResult(null)
+    setError(null)
   }
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
     setFiles([])
     setResult(null)
+    setError(null)
   }
 
   const handleCompress = async () => {
@@ -252,6 +261,7 @@ export default function Compress() {
     }
 
     setCompressing(true)
+    setError(null)
     setCompressStatus('Waking up server...')
 
     // Ping server first to wake Railway from sleep (free tier goes idle)
@@ -275,7 +285,7 @@ export default function Compress() {
 
           if (!res.ok) {
             const errorText = await res.text()
-            throw new Error(errorText || 'Compression failed on server')
+            throw Object.assign(new Error('server'), { serverText: errorText })
           }
 
           const blob = await res.blob()
@@ -316,7 +326,7 @@ export default function Compress() {
 
           if (!res.ok) {
             const errorText = await res.text()
-            throw new Error(errorText || 'PDF compression failed on server')
+            throw Object.assign(new Error('server'), { serverText: errorText })
           }
           setCompressStatus('Compressing...')
 
@@ -344,12 +354,7 @@ export default function Compress() {
       }
     } catch (err) {
       console.error(err)
-      const msg = err?.message || ''
-      if (msg && msg.length < 300) {
-        alert(msg)
-      } else {
-        alert('Compression failed. Please try again in a few seconds.')
-      }
+      setError(getErrorMessage(err, err?.serverText || ''))
     } finally {
       setCompressing(false)
       setCompressStatus('')
@@ -414,9 +419,19 @@ export default function Compress() {
           ))}
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <ErrorBanner
+            type={error.type}
+            title={error.title}
+            message={error.message}
+            onDismiss={() => setError(null)}
+          />
+        )}
+
         {/* Content */}
         {files.length === 0 && !result && (
-          <UploadZone tab={activeTab} onFileSelect={handleFileSelect} />
+          <UploadZone tab={activeTab} onFileSelect={handleFileSelect} onError={setError} />
         )}
 
         {files.length > 0 && !result && (

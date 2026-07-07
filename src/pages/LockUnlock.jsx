@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
+import ErrorBanner from '../components/ErrorBanner'
+import { getErrorMessage } from '../utils/errorUtils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
@@ -115,7 +117,7 @@ export default function LockUnlock() {
     if (acceptedFiles.length > 0) {
       setFile(acceptedFiles[0])
       setResult(null)
-      setError('')
+      setError(null)
       setPassword('')
     }
   }, [])
@@ -130,29 +132,29 @@ export default function LockUnlock() {
     setActiveTab(tab)
     setFile(null)
     setResult(null)
-    setError('')
+    setError(null)
     setPassword('')
   }
 
   const handleReset = () => {
     setFile(null)
     setResult(null)
-    setError('')
+    setError(null)
     setPassword('')
   }
 
   const handleSubmit = async () => {
     if (!password.trim()) {
-      setError('Please enter a password')
+      setError({ type: 'unknown', title: 'Password Required', message: 'Please enter a password to continue.' })
       return
     }
     if (activeTab === 'Lock PDF' && password.length < 4) {
-      setError('Password must be at least 4 characters')
+      setError({ type: 'unknown', title: 'Password Too Short', message: 'Password must be at least 4 characters.' })
       return
     }
 
     setProcessing(true)
-    setError('')
+    setError(null)
 
     try {
       const formData = new FormData()
@@ -169,14 +171,14 @@ export default function LockUnlock() {
       })
 
       if (res.status === 401) {
-        setError('Incorrect password. Please try again.')
+        setError({ type: 'unknown', title: 'Wrong Password', message: 'Incorrect password. Please try again.' })
         setProcessing(false)
         return
       }
 
       if (!res.ok) {
         const message = await res.text()
-        setError(message || 'Something went wrong. Please try again.')
+        setError(getErrorMessage(new Error('server'), message || 'Something went wrong. Please try again.'))
         setProcessing(false)
         return
       }
@@ -185,7 +187,7 @@ export default function LockUnlock() {
       setResult({ url: URL.createObjectURL(blob) })
     } catch (err) {
       console.error(err)
-      setError('Could not connect to server. Make sure the backend is running.')
+      setError(getErrorMessage(err, ''))
     } finally {
       setProcessing(false)
     }
@@ -251,7 +253,7 @@ export default function LockUnlock() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value)
-                  setError('')
+                  setError(null)
                 }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
                 placeholder={activeTab === 'Lock PDF' ? 'Set a password...' : 'Enter PDF password...'}
@@ -278,7 +280,12 @@ export default function LockUnlock() {
 
             {/* Error */}
             {error && (
-              <p className="text-red-400 text-xs px-2">{error}</p>
+              <ErrorBanner
+                type={error.type || 'unknown'}
+                title={error.title || 'Error'}
+                message={error.message || error}
+                onDismiss={() => setError(null)}
+              />
             )}
 
             {/* Submit Button */}

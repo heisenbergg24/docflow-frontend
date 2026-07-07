@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
+import ErrorBanner from '../components/ErrorBanner'
+import { getErrorMessage } from '../utils/errorUtils'
 
 const tabs = ['Merge PDF', 'Split PDF', 'Reorder Pages']
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
@@ -317,6 +319,7 @@ export default function Organize() {
   const [pageCount, setPageCount] = useState(0)
   const [pageOrder, setPageOrder] = useState([])
   const [fetchingPageCount, setFetchingPageCount] = useState(false)
+  const [error, setError] = useState(null)
 
   const isMerge = activeTab === 'Merge PDF'
   const isReorder = activeTab === 'Reorder Pages'
@@ -328,14 +331,14 @@ export default function Organize() {
       const formData = new FormData()
       formData.append('file', file)
       const res = await fetch(`${BASE}/api/organize/page-count`, { method: 'POST', body: formData })
-      if (!res.ok) throw new Error('Failed to read page count')
+      if (!res.ok) throw Object.assign(new Error('server'), { serverText: await res.text() })
       const data = await res.json()
       const count = data.pageCount
       setPageCount(count)
       setPageOrder(Array.from({ length: count }, (_, i) => ({ pageNum: i + 1, rotation: 0 })))
     } catch (err) {
       console.error(err)
-      alert('Could not read the PDF page count. Make sure the backend is running.')
+      setError(getErrorMessage(err, err?.serverText || ''))
     } finally {
       setFetchingPageCount(false)
     }
@@ -368,6 +371,7 @@ export default function Organize() {
     setSplitRange('')
     setPageOrder([])
     setPageCount(0)
+    setError(null)
   }
 
   const handleRemove = (index) => {
@@ -381,17 +385,19 @@ export default function Organize() {
     setSplitRange('')
     setPageOrder([])
     setPageCount(0)
+    setError(null)
   }
 
   const handleProcess = async () => {
     setProcessing(true)
+    setError(null)
     try {
       if (activeTab === 'Merge PDF') {
         const formData = new FormData()
         files.forEach(f => formData.append('files', f))
 
         const res = await fetch(`${BASE}/api/organize/merge`, { method: 'POST', body: formData })
-        if (!res.ok) throw new Error(await res.text())
+        if (!res.ok) throw Object.assign(new Error('server'), { serverText: await res.text() })
 
         const blob = await res.blob()
         setResult({ url: URL.createObjectURL(blob), filename: 'merged.pdf' })
@@ -403,7 +409,7 @@ export default function Organize() {
         if (splitMode === 'range') formData.append('ranges', splitRange)
 
         const res = await fetch(`${BASE}/api/organize/split`, { method: 'POST', body: formData })
-        if (!res.ok) throw new Error(await res.text())
+        if (!res.ok) throw Object.assign(new Error('server'), { serverText: await res.text() })
 
         const blob = await res.blob()
         const baseName = files[0].name.replace(/\.pdf$/, '')
@@ -416,7 +422,7 @@ export default function Organize() {
         formData.append('rotations', pageOrder.map(p => p.rotation).join(','))
 
         const res = await fetch(`${BASE}/api/organize/reorder`, { method: 'POST', body: formData })
-        if (!res.ok) throw new Error(await res.text())
+        if (!res.ok) throw Object.assign(new Error('server'), { serverText: await res.text() })
 
         const blob = await res.blob()
         const baseName = files[0].name.replace(/\.pdf$/, '')
@@ -424,7 +430,7 @@ export default function Organize() {
       }
     } catch (err) {
       console.error(err)
-      alert('Something went wrong. Make sure the backend is running.\n\n' + err.message)
+      setError(getErrorMessage(err, err?.serverText || ''))
     } finally {
       setProcessing(false)
     }
@@ -463,6 +469,16 @@ export default function Organize() {
             Merge, split, and reorder your PDF pages with ease.
           </p>
         </div>
+
+        {/* Error Banner */}
+        {error && (
+          <ErrorBanner
+            type={error.type}
+            title={error.title}
+            message={error.message}
+            onDismiss={() => setError(null)}
+          />
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-900 p-1 rounded-full mb-8">

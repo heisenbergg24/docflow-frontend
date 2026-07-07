@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
+import ErrorBanner from '../components/ErrorBanner'
+import { getErrorMessage } from '../utils/errorUtils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
@@ -170,22 +172,26 @@ export default function Convert() {
   const [selectedConversion, setSelectedConversion] = useState(null)
   const [converting, setConverting] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
 
   const handleFileSelect = (f) => {
     setFile(f)
     setSelectedConversion(null)
     setResult(null)
+    setError(null)
   }
 
   const handleCancel = () => {
     setFile(null)
     setSelectedConversion(null)
     setResult(null)
+    setError(null)
   }
 
   const handleConversionSelect = async (option) => {
     setSelectedConversion(option)
     setConverting(true)
+    setError(null)
 
     try {
       const isPdf = file.type.includes('pdf')
@@ -282,7 +288,10 @@ export default function Convert() {
       }
     } catch (err) {
       console.error(err)
-      alert('Something went wrong during conversion. Make sure the backend is running.\n\n' + err.message)
+      // Detect network errors vs server errors
+      const serverText = err?.serverText || (err?.message?.startsWith('<') ? '' : err?.message) || ''
+      setError(getErrorMessage(err, serverText))
+      setSelectedConversion(null)
     } finally {
       setConverting(false)
     }
@@ -300,6 +309,7 @@ export default function Convert() {
     setFile(null)
     setSelectedConversion(null)
     setResult(null)
+    setError(null)
   }
 
   return (
@@ -314,6 +324,16 @@ export default function Convert() {
             Convert between PDF, Word, PowerPoint, and images instantly.
           </p>
         </div>
+
+        {/* Error Banner */}
+        {error && (
+          <ErrorBanner
+            type={error.type}
+            title={error.title}
+            message={error.message}
+            onDismiss={() => setError(null)}
+          />
+        )}
 
         {!file && !result && (
           <UploadZone onFileSelect={handleFileSelect} />
