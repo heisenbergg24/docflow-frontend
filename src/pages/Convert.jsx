@@ -5,6 +5,28 @@ import { getErrorMessage } from '../utils/errorUtils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
+// Wake Railway from sleep (free tier cold-starts can take 10-30s)
+async function warmupServer(baseUrl) {
+  try {
+    await fetch(`${baseUrl}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(25000) })
+    await new Promise(r => setTimeout(r, 1500))
+  } catch {
+    // Best-effort; main request will retry on failure
+  }
+}
+
+// Retry on network failures only, not server errors (4xx/5xx)
+async function fetchWithNetworkRetry(url, options, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options)
+    } catch (networkErr) {
+      if (attempt === retries) throw networkErr
+      await new Promise(r => setTimeout(r, 3000 * attempt)) // 3s → 6s → 9s
+    }
+  }
+}
+
 const conversionOptions = [
   { name: 'Word', format: 'docx', icon: '📄', color: 'indigo' },
   { name: 'PowerPoint', format: 'pptx', icon: '📽️', color: 'orange' },
@@ -197,12 +219,15 @@ export default function Convert() {
       const isPdf = file.type.includes('pdf')
       const isPdfToImage = isPdf && option.format === 'jpg'
 
+      // Wake Railway from sleep before the real request
+      await warmupServer(API_BASE_URL)
+
       if (isPdfToImage) {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('format', 'png')
 
-        const res = await fetch(`${API_BASE_URL}/api/convert/pdf-to-image`, {
+        const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/convert/pdf-to-image`, {
           method: 'POST',
           body: formData
         })
@@ -223,7 +248,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('files', file)
 
-        const res = await fetch(`${API_BASE_URL}/api/convert/image-to-pdf`, {
+        const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/convert/image-to-pdf`, {
           method: 'POST',
           body: formData
         })
@@ -241,7 +266,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch(`${API_BASE_URL}/api/convert/pdf-to-word`, {
+        const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/convert/pdf-to-word`, {
           method: 'POST',
           body: formData
         })
@@ -255,7 +280,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch(`${API_BASE_URL}/api/convert/pdf-to-ppt`, {
+        const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/convert/pdf-to-ppt`, {
           method: 'POST',
           body: formData
         })
@@ -269,7 +294,7 @@ export default function Convert() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch(`${API_BASE_URL}/api/convert/office-to-pdf`, {
+        const res = await fetchWithNetworkRetry(`${API_BASE_URL}/api/convert/office-to-pdf`, {
           method: 'POST',
           body: formData
         })

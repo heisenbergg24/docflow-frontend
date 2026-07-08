@@ -5,6 +5,28 @@ import { getErrorMessage } from '../utils/errorUtils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
+// Wake Railway from sleep (free tier cold-starts can take 10-30s)
+async function warmupServer(baseUrl) {
+  try {
+    await fetch(`${baseUrl}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(25000) })
+    await new Promise(r => setTimeout(r, 1500))
+  } catch {
+    // Best-effort; main request will retry on failure
+  }
+}
+
+// Retry on network failures only, not server errors (4xx/5xx)
+async function fetchWithNetworkRetry(url, options, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options)
+    } catch (networkErr) {
+      if (attempt === retries) throw networkErr
+      await new Promise(r => setTimeout(r, 3000 * attempt)) // 3s → 6s → 9s
+    }
+  }
+}
+
 function UploadZone({ onFileSelect, isDragActive, getRootProps, getInputProps }) {
   return (
     <div
@@ -156,6 +178,9 @@ export default function LockUnlock() {
     setProcessing(true)
     setError(null)
 
+    // Wake Railway from sleep before the real request
+    await warmupServer(API_BASE_URL)
+
     try {
       const formData = new FormData()
       formData.append('file', file)
@@ -165,7 +190,7 @@ export default function LockUnlock() {
         ? `${API_BASE_URL}/api/lock-pdf`
         : `${API_BASE_URL}/api/unlock-pdf`
 
-      const res = await fetch(endpoint, {
+      const res = await fetchWithNetworkRetry(endpoint, {
         method: 'POST',
         body: formData
       })

@@ -182,25 +182,29 @@ function CompressResult({ originalSize, compressedSize, isMultiple, fileCount, p
   )
 }
 
-// Ping backend to wake it up from Railway sleep before actual request
+// Ping backend to wake it up from Railway sleep before actual request.
+// Railway free tier can take 10–30s to cold-start; 25s timeout gives it a real chance.
 async function warmupServer(baseUrl) {
   try {
-    await fetch(`${baseUrl}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(8000) })
+    await fetch(`${baseUrl}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(25000) })
+    // Small buffer after ping responds to ensure server is fully ready
+    await new Promise(r => setTimeout(r, 1500))
   } catch {
-    // Ignore — warmup is best-effort
+    // Ignore — warmup is best-effort; main request will retry on failure
   }
 }
 
-// Retry on network failures only (e.g. Safari 'Load failed', LTE drops)
-// Does NOT retry on server errors (4xx/5xx) — those are deterministic
-async function fetchWithNetworkRetry(url, options, retries = 2) {
+// Retry on network failures only (e.g. Safari 'Load failed', LTE drops, Railway cold start).
+// Does NOT retry on server errors (4xx/5xx) — those are deterministic.
+async function fetchWithNetworkRetry(url, options, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, options)
       return res  // Any HTTP response (even 4xx/5xx) — let caller handle it
     } catch (networkErr) {
       if (attempt === retries) throw networkErr
-      await new Promise(r => setTimeout(r, 2000 * attempt)) // 2s, then 4s
+      // 3s → 6s → 9s backoff; gives Railway time to fully wake
+      await new Promise(r => setTimeout(r, 3000 * attempt))
     }
   }
 }
@@ -262,9 +266,10 @@ export default function Compress() {
 
     setCompressing(true)
     setError(null)
-    setCompressStatus('Waking up server...')
+    setCompressStatus('Connecting to server...')
 
-    // Ping server first to wake Railway from sleep (free tier goes idle)
+    // Ping server first to wake Railway from sleep (free tier goes idle).
+    // This can take up to 25s on a cold start — status message keeps the user informed.
     await warmupServer(API_BASE_URL)
     setCompressStatus('Uploading...')
 
